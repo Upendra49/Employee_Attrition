@@ -1,0 +1,375 @@
+
+#clear session
+rm(list = ls())
+cat('\014')
+
+library(utils)    #for importing the file
+library(mlbench)  #for correlation matrix
+library(caret)    #for models
+library(ggplot2)  #for plotting graphs
+library(tidyverse) 
+library(dplyr)
+library(ggplot2)
+library(reshape2)
+library(tree)
+library(cowplot)
+library(plotrix)
+library(caret)
+library(partykit)
+library(rpart)
+library(smote)
+library(gbm)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+library(dplyr)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(caret)
+library(gbm)
+library(survival)
+library(pROC)
+library(DMwR2)
+library(scales)
+library(base)
+library(dummies)
+library(plotrix)
+library(dplyr)
+library(tidyr)
+library(tidyverse)
+library(lubridate)
+library(fitdistrplus)
+library(outliers)
+library(tree)
+library(corrplot)
+#install.packages("corrplot")
+library(corrplot)
+library(grid)
+#install.packages("gridExtra")
+library(gridExtra)
+# Import the source data
+#setwd("C:/Users/D/Desktop/CIS 8695/project")
+
+hra = read.csv("HRAnalytics.csv")
+#Rename the columns with trash value to actual value
+colnames(hra)[colnames(hra) == '?..Age'] <- 'Age'
+# data Cleaning
+head(hra)
+# Removing columns which have no variance and hold no significance to target variable
+hra=hra[,-c(9,10,22,27)]
+#checking null values
+sum(is.na(hra))
+
+# Data Exploration
+
+#data visualization
+
+#comparison of continuous values with Attrition
+
+g1 <- ggplot(hra, aes(x = PercentSalaryHike, fill = Attrition)) + geom_density(alpha = 0.7) + scale_fill_manual(values = c("#FFFF80FF", "#FF8000FF" ))
+
+g2 <- ggplot(hra, aes(x = MonthlyIncome, fill = Attrition)) + geom_density(alpha = 0.7) + scale_fill_manual(values = c("#FFFF80FF","#FF8000FF"))
+
+g3 <- ggplot(hra, aes(x = HourlyRate, fill = Attrition)) + geom_density(alpha = 0.7) + scale_fill_manual(values = c("#FFFF80FF","#FF8000FF"))
+
+g4 <- ggplot(hra, aes(x = DailyRate, fill = Attrition)) + geom_density(alpha = 0.7) + scale_fill_manual(values = c("#FFFF80FF","#FF8000FF"))
+
+grid.arrange(g1, g2, g3, g4 ,ncol = 2, nrow = 2)
+
+# factoring required variables as factors
+#factoring limited numeric values to factors/categories
+
+hra$Attrition <- as.factor(hra$Attrition)
+hra$BusinessTravel <- as.factor(hra$BusinessTravel)
+hra$Department <- as.factor(hra$Department)
+hra$Gender <- as.factor(hra$Gender)
+hra$JobRole <- as.factor(hra$JobRole)
+hra$MaritalStatus <- as.factor(hra$MaritalStatus)
+hra$EducationField <- as.factor(hra$EducationField)
+hra$Education <- as.factor(hra$Education)
+hra$JobLevel <- as.factor(hra$JobLevel)
+hra$StockOptionLevel <- as.factor(hra$StockOptionLevel)
+hra$EnvironmentSatisfaction <- as.factor(hra$EnvironmentSatisfaction)
+hra$JobSatisfaction <- as.factor(hra$JobSatisfaction)
+hra$WorkLifeBalance <- as.factor(hra$WorkLifeBalance)
+hra$JobInvolvement <- as.factor(hra$JobInvolvement)
+hra$PerformanceRating <- as.factor(hra$PerformanceRating)
+hra$OverTime <- as.factor(hra$OverTime)
+
+
+#Relation between binary variables and target variables
+
+#Overtime vs Attrition using gglpot
+
+ggplot(hra, 
+       aes(x = OverTime, group = Attrition)) + 
+  geom_bar(aes(y = ..prop.., fill = factor(..x..)), 
+           stat="count", 
+           alpha = 0.7) +
+  geom_text(aes(label = scales::percent(..prop..), y = ..prop.. ), 
+            stat= "count", 
+            vjust = -.5) +
+  labs(y = "%", fill= "Over-Time") +
+  facet_grid(~Attrition) +
+  scale_fill_manual(values = c("#000000","#FF8000FF")) + 
+  theme(legend.position = "none", plot.title = element_text(hjust = 0.5)) + 
+  ggtitle("Attrition")
+
+#Work life balance and attrition
+
+ggplot(hra, 
+       aes(x= WorkLifeBalance, y=DistanceFromHome, group = WorkLifeBalance, fill = WorkLifeBalance)) + 
+  geom_boxplot(alpha=0.7) + 
+  theme(legend.position="none") + 
+  facet_wrap(~ Attrition) + 
+  ggtitle("Attrition") + 
+  theme(plot.title = element_text(hjust = 0.5))
+
+#travel and attrition
+
+ggplot(hra, 
+       aes(x= BusinessTravel,  group=Attrition)) + 
+  geom_bar(aes(y = ..prop.., fill = factor(..x..)), 
+           stat="count", 
+           alpha = 0.7) +
+  geom_text(aes(label = scales::percent(..prop..), y = ..prop.. ), 
+            stat= "count", 
+            vjust = -.5) +
+  labs(y = "Percentage", fill="Business Travel") +
+  facet_grid(~Attrition) +
+  scale_y_continuous(labels=percent) + 
+  scale_fill_manual(values = c("#8DD3C7", "#FFFFB3", "#BEBADA" ,"#FB8072")) + 
+  theme(legend.position = "bottom", plot.title = element_text(hjust = 0.5)) + 
+  ggtitle("Attrition")
+
+#Correlation between Marital status and Attrition
+ggplot(hra,aes(Attrition,MaritalStatus,color=Attrition))+geom_jitter()
+
+#Find highly correlated features
+correlation_m=cor(hra[sapply(hra, is.numeric)])
+highlyCorrelated = findCorrelation(correlation_m, cutoff=0.6)
+highlyCorrelated
+
+#Box plot for outliers
+
+#outliers
+
+boxplot(hra$MonthlyRate,
+        ylab = "Monthly Rate")
+
+
+boxplot(hra$HourlyRate,
+        ylab = "Hourly Rate")
+
+boxplot(hra$MonthlyIncome,ylab = "MonthlyIncome")
+
+#capping upper outlier values to 85th Percentile
+
+hra$MonthlyIncome <- squish(hra$MonthlyIncome, quantile(hra$MonthlyIncome, c(.05, .85)))
+boxplot(hra$MonthlyIncome,ylab = "MonthlyIncome")
+
+#splitting of data to train 70% and test 30%
+
+set.seed(22)
+train.index <- sample(c(1:dim(hra)[1]), dim(hra)[1]*0.7)  
+train.df <- hra[train.index,]
+test.df <- hra[-train.index,]
+
+#defining a dataframe for probability and pred storage
+prob.df<-cbind(test.df)
+#head(test.df)
+#head(train.df)
+#Code for resizing
+fig <- function(w, h){
+  options(repr.plot.width = w, repr.plot.height = h)
+}
+
+fig(20,20)
+numerics <- unlist(lapply(train.df, is.numeric))
+numerics <- train.df[,numerics]
+
+cor.mtest <- function(mat, ...) {
+  mat <- as.matrix(mat)
+  n <- ncol(mat)
+  p.mat<- matrix(NA, n, n)
+  diag(p.mat) <- 0
+  for (i in 1:(n - 1)) {
+    for (j in (i + 1):n) {
+      tmp <- cor.test(mat[, i], mat[, j], ...)
+      p.mat[i, j] <- p.mat[j, i] <- tmp$p.value
+    }
+  }
+  colnames(p.mat) <- rownames(p.mat) <- colnames(mat) 
+  p.mat
+}
+M <- cor(numerics)
+p.mat <- cor.mtest(numerics)
+
+title <- "Correlation Plot of Numeric Features"
+col <- colorRampPalette(c("#BB4444", "#EE9988", "#FFFFFF", "#77AADD", "#4477AA"))
+corrplot(M, method="color", col=col(200),  
+         diag=FALSE,
+         type="lower", order="hclust", 
+         title = title, 
+         addCoef.col = "black",
+         p.mat = p.mat, sig.level = 0.05, insig = "blank", 
+         mar=c(0,0,1,0) 
+)
+
+#defining the predictors
+predictors<-c("Age", "BusinessTravel" ,"DailyRate", "DistanceFromHome", "Education",
+              "EducationField", "EnvironmentSatisfaction", "Gender", "HourlyRate", "JobInvolvement",		
+              "JobSatisfaction", "MonthlyRate", "NumCompaniesWorked", "OverTime", 
+              "PercentSalaryHike", "PerformanceRating", "RelationshipSatisfaction",   
+              "TrainingTimesLastYear", "WorkLifeBalance",	"YearsInCurrentRole",	"YearsSinceLastPromotion",
+              "YearsWithCurrManager")
+
+#colnames(train.df[, -c(5,13,14,16,17,24,25,28)])
+#defining the outcome feature
+outcomeName<-c("Attrition")
+
+fitControl <- trainControl(
+  method = "cv",
+  number = 5,
+  savePredictions = 'final',
+  classProbs = T)
+
+#dummy_model <- glm(as.factor(train.df$Attrition)~., data = numerics, family = "binomial")
+#print(vif(dummy_model))
+
+
+#logistic regression method 1
+
+
+#logistic regression
+
+logi <- glm(train.df$Attrition~., data = train.df, family = "binomial")
+
+#checking multicollinearities between predictor variables
+
+car :: vif(logi)
+ 
+#we find that monthly income,department, Job Level & yearsatCompany, has high VIF (VIF>5), so remove and re-run the model
+
+logi1 <- glm(as.factor(Attrition) ~ Age + BusinessTravel + DailyRate + DistanceFromHome+ Education
+             + EducationField+ EnvironmentSatisfaction+ Gender+ HourlyRate+ JobInvolvement	+ JobRole	
+             + JobSatisfaction	+ MaritalStatus + MonthlyRate+ NumCompaniesWorked + OverTime 
+             + PercentSalaryHike + PerformanceRating + RelationshipSatisfaction  + StockOptionLevel 
+             + 	TrainingTimesLastYear + WorkLifeBalance	 +	YearsInCurrentRole+	YearsSinceLastPromotion
+             +	YearsWithCurrManager, data=test.df, family = binomial)
+summary(logi)
+car :: vif(logi1)
+
+
+#removing JobRole,stockoption level, MaritalStatus
+
+logi2 <- glm(as.factor(Attrition) ~ Age + BusinessTravel + DailyRate + DistanceFromHome+ Education
+             + EducationField+ EnvironmentSatisfaction+ Gender+ HourlyRate+ JobInvolvement		
+             + JobSatisfaction	 + MonthlyRate+ NumCompaniesWorked + OverTime 
+             + PercentSalaryHike + PerformanceRating + RelationshipSatisfaction   
+             + 	TrainingTimesLastYear + WorkLifeBalance	 +	YearsInCurrentRole+	YearsSinceLastPromotion
+             +	YearsWithCurrManager, data=test.df, family = binomial)
+summary(logi2)
+car :: vif(logi2)
+
+#We have no predictors with VIF >5, we are good to go.
+
+#Finding out which variables are significant
+set.seed(823)
+VariableImportancePlot <- randomForest(as.factor(Attrition) ~ Age + BusinessTravel + DailyRate + DistanceFromHome+ Education
+                                       + EducationField+ EnvironmentSatisfaction+ Gender+ HourlyRate+ JobInvolvement		
+                                       + JobSatisfaction	 + MonthlyRate+ NumCompaniesWorked + OverTime 
+                                       + PercentSalaryHike + PerformanceRating + RelationshipSatisfaction   
+                                       + 	TrainingTimesLastYear + WorkLifeBalance	 +	YearsInCurrentRole+	YearsSinceLastPromotion
+                                       +	YearsWithCurrManager, data = train.df, importance=TRUE)
+varImpPlot(VariableImportancePlot)
+
+
+#prediction on test data
+
+
+mypreds <- predict(logi2, newdata = test.df)
+mypreds1 <- ifelse(exp(mypreds) < 0.5, "No", "Yes")
+
+
+#Confusion matrix 
+#accuracy: 87.98
+library(caret)
+confusionMatrix(factor(mypreds1), factor(test.df$Attrition))
+
+
+#logistic regression method 2
+
+model_lr<-train(train.df[,predictors],train.df[,outcomeName],method='glm',
+                trControl=fitControl,tuneLength=3)
+
+#prediction of LR
+prob.df$pred_lr<-predict(object = model_lr,test.df[,predictors])
+prob.df$pred_lr.prob<-predict(object = model_lr,test.df[,predictors],type="prob")
+library('caret')
+#Finding accuracy of the model
+confusionMatrix(test.df$Attrition,prob.df$pred_lr)
+
+
+#Randomforest
+model_rf<-train(train.df[,predictors],train.df[,outcomeName],method='rf',
+                trControl=fitControl,tuneLength=3)
+
+#Predicting using random forest model
+prob.df$pred_rf<-predict(object = model_rf,test.df[,predictors])
+prob.df$pred_rf.prob<-predict(object = model_rf,test.df[,predictors],type="prob")
+#Checking the accuracy of the random forest model
+confusionMatrix(test.df$Attrition,prob.df$pred_rf)
+
+#Naive bayes approach
+model_nb<-train(train.df[,predictors],train.df[,outcomeName],method='nb',
+                trControl=fitControl,tuneLength=3)
+#Predicting using Naive Bayes model
+prob.df$pred_nb<-predict(object = model_nb,test.df[,predictors])
+prob.df$pred_nb.prob<-predict(object = model_nb,test.df[,predictors],type="prob")
+#Checking the accuracy of the Naive Bayes model
+confusionMatrix(test.df$Attrition,prob.df$pred_nb)
+
+#Decision tree
+model_tree <- rpart(Attrition ~., data = train.df[, -c(5,13,14,16,17,24,25,28)],minbucket=1,minsplit = 1)
+#Prediction of decision
+prob.df$dt.preds <- predict(model_tree, test.df, type = "class")
+#Checking the accuracy of the Naive Bayes model
+confusionMatrix(test.df$Attrition,prob.df$dt.pred)
+#check area under a curve
+rocv <- roc(as.numeric(test.df$Attrition), as.numeric(prob.df$dt.preds ))
+rocv$auc
+
+#pruning for tree
+model_dtreepr <- prune(model_tree, cp = 0.01666667)
+#predicting for the pruning
+prob.df$dtpr.preds <- predict(model_dtreepr, test.df, type = "class")
+#finding the accuracy
+confusionMatrix(test.df$Attrition,prob.df$dtpr.preds)
+
+rpart.plot(model_dtreepr, 
+           type = 4, 
+           extra = 104, 
+           tweak = 0.9, 
+           fallen.leaves = F)
+
+#Ensemble Model
+prob.df$pred_avg<-(prob.df$pred_rf.prob$Yes+prob.df$pred_lr.prob$Yes+prob.df$pred_nb.prob$Yes)/3
+#Splitting into binary classes at 0.5
+prob.df$pred_class<-as.factor(ifelse(prob.df$pred_avg>0.5,'Yes','No'))
+ensemble.averaging<-confusionMatrix(test.df$Attrition,prob.df$pred_class)
+ensemble.averaging
+
+#Neural Network
+#Step:1 Feature Selection
+model_nn=train(Attrition~., train.df[, -c(5,13,14,16,17,24,25,28)], method="dnn", trControl=fitControl)
+importance_nn=varImp(model_nn, scale=FALSE)
+importance_nn
+
+#Step:2 Predict using model and dataset
+prob.df$nn.preds=predict(model_nn,test.df)
+
+#Step:3 Measure Accuracy
+model_accuracy_nn=sum(prob.df$nn.preds == test.df$Attrition)/nrow(test.df)
+model_accuracy_nn
